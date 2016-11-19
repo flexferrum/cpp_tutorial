@@ -9,21 +9,32 @@ int main()
  
 	std::cin >> a >> b >> ch;
 	
-	if (ch == '+')
-		std::cout << "a + b = " << a + b << std::endl;
-	else if (ch == '-')
-		std::cout << "a - b = " << a - b << std::endl;
-	else if (ch == '*')
-		std::cout << "a * b = " << a * b << std::endl;
-	else if (ch == '/')
+	double result = 0.0;
+	switch (ch)
+	{
+	case '+':
+		result = a + b;
+		break;
+	case '-':
+		result = a - b;
+		break;
+	case '*':
+		result = a * b;
+		break;
+	case '/':
 	{
 		if (b != 0)
 			std::cout << "a / b = " << a / b << std::endl;
 		else
 			std::cout << "Division by zero!" << std::endl;
+		break;
 	}
-	else
+	default:
 		std::cout << "Unknown operation '" << ch << "'" << std::endl;
+		return 0;
+	}
+	
+	std::cout << "a " << ch << " b = " << result << std::endl;
 	
 	return 0;
 }
