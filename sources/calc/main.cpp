@@ -1,5 +1,7 @@
-#include "calculator.h"
+#include "processor.h"
 #include "input_parser.h"
+#include "command_base.h"
+#include "commands_visitor_base.h"
 
 #include <iostream>
 #include <regex>
@@ -11,8 +13,46 @@
 #include <cctype>
 #include <cmath>
 
+class LoadNumberCommand : public CommandBase
+{
+public:
+    LoadNumberCommand(double num)
+    {
+        ;
+    }
+};
+
+class UnaryOperationCommand : public CommandBase
+{
+public:
+};
+
+class BinaryOperationCommand : public CommandBase
+{
+public:
+};
+
+using Commands = CommandsList<LoadNumberCommand, UnaryOperationCommand, BinaryOperationCommand>;
+
+class Calculator : public CommandVisitor<Calculator, Commands>
+{
+public:
+    void Visit(const LoadNumberCommand& cmd, const Processor& proc)
+    {
+        std::cout << "LoadNumberCommand visited" << std::endl;
+    }
+    void Visit(const UnaryOperationCommand& cmd, const Processor& proc)
+    {
+        std::cout << "UnaryOperationCommand visited" << std::endl;
+    }
+    void Visit(const BinaryOperationCommand& cmd, const Processor& proc)
+    {
+        std::cout << "BinaryOperationCommand visited" << std::endl;
+    }
+};
+
 template<typename Key, typename Fn>
-bool ProcessCommand(const std::map<Key, Fn> &commands, const Key &cmd, Calculator &calc)
+bool ProcessCommand(const std::map<Key, Fn> &commands, const Key &cmd, Processor &calc)
 {
    auto p = commands.find(cmd);
    if (p == commands.end())
@@ -22,7 +62,7 @@ bool ProcessCommand(const std::map<Key, Fn> &commands, const Key &cmd, Calculato
    return true;
 }
 
-void ShowStack(Calculator &calc)
+void ShowStack(Processor &calc)
 {
     auto &stack = calc.GetStack();
     
@@ -56,16 +96,16 @@ void DumpInputData(const InputData& result)
 
 int main()
 {
-    Calculator calc;
+    Processor calc;
     
-    using Fn = std::function<void (Calculator &)>;
+    using Fn = std::function<void (Processor &)>;
     
     std::map<char, Fn> operators = 
     {
-        {'+', [](Calculator &calc){DoBinaryOper(calc, std::plus<double>());}},
-        {'-', [](Calculator &calc){DoBinaryOper(calc, std::minus<double>());}},
-        {'*', [](Calculator &calc){DoBinaryOper(calc, std::multiplies<double>());}},
-        {'/', [](Calculator &calc){DoBinaryOper(calc, 
+        {'+', [](Processor &calc){DoBinaryOper(calc, std::plus<double>());}},
+        {'-', [](Processor &calc){DoBinaryOper(calc, std::minus<double>());}},
+        {'*', [](Processor &calc){DoBinaryOper(calc, std::multiplies<double>());}},
+        {'/', [](Processor &calc){DoBinaryOper(calc, 
                                    [](double x, double y) {return y / x;}, 
                                    [](double x, double /*y*/) {return x != 0;});
          }},
@@ -73,23 +113,33 @@ int main()
     
     std::map<std::string, Fn> functions = 
     {
-        {"sin", [](Calculator &calc){DoUnaryOper(calc, sin);}}, 
-        {"cos", [](Calculator &calc){DoUnaryOper(calc, cos);}}, 
-        {"exp", [](Calculator &calc){DoUnaryOper(calc, exp);}}, 
-        {"pow", [](Calculator &calc){DoBinaryOper(calc, pow);}}, 
-        {"neg", [](Calculator &calc){DoUnaryOper(calc, [](double val) {return -val;});}}, 
+        {"sin", [](Processor &calc){DoUnaryOper(calc, sin);}}, 
+        {"cos", [](Processor &calc){DoUnaryOper(calc, cos);}}, 
+        {"exp", [](Processor &calc){DoUnaryOper(calc, exp);}}, 
+        {"pow", [](Processor &calc){DoBinaryOper(calc, pow);}}, 
+        {"neg", [](Processor &calc){DoUnaryOper(calc, [](double val) {return -val;});}}, 
     };
     
     bool doQuit = false;
     
     std::map<std::string, Fn> commands = 
     {
-        {"quit", [&doQuit](Calculator &){doQuit = true;}}, 
-        {"list", [](Calculator &){std::cout << "List program" << std::endl;}}, 
+        {"quit", [&doQuit](Processor &){doQuit = true;}}, 
+        {"list", [](Processor &){std::cout << "List program" << std::endl;}}, 
         {"stack", ShowStack}, 
-        {"run", [](Calculator &){std::cout << "Run program" << std::endl;}}, 
-    };    
+        {"run", [](Processor &){std::cout << "Run program" << std::endl;}}, 
+    };
     
+    LoadNumberCommand cmd1(10.0);
+    UnaryOperationCommand cmd2;
+    BinaryOperationCommand cmd3;
+    
+    Calculator calcNew;
+    
+    calcNew.VisitCommand(&cmd1, calc);
+    calcNew.VisitCommand(&cmd2, calc);
+    calcNew.VisitCommand(&cmd3, calc);
+   
     InputParser inputParser;
     AppendRegExpString(inputParser, "", operators);
     AppendRegExpString(inputParser, "?:", functions);

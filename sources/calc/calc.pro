@@ -4,10 +4,11 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    calculator.cpp \
     input_parser.cpp \
-#    shared_pointer.cpp
+    processor.cpp
 
 HEADERS += \
-    calculator.h \
-    input_parser.h
+    input_parser.h \
+    processor.h \
+    command_base.h \
+    commands_visitor_base.h

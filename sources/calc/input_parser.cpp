@@ -62,7 +62,12 @@ InputData InputParser::ParseLine(const std::string &line)
 
 std::string InputParser::ExtractCommandParams(const std::string &line, size_t startPos)
 {
-    return "";    
+    auto p = line.begin() + startPos;
+    for (; p != line.end(); ++ p)
+        if (!std::isspace(*p))
+            break;
+    
+    return std::string(p, line.end());
 }
 
 void InputParser::PrepareRegExp()

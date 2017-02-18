@@ -1,6 +1,6 @@
-#include "calculator.h"
+#include "processor.h"
 
-void Calculator::Push(double val, bool updateLastRes)
+void Processor::Push(double val, bool updateLastRes)
 {
     if (updateLastRes)
         m_lastResult = val;
@@ -8,7 +8,7 @@ void Calculator::Push(double val, bool updateLastRes)
     m_stack.push_front(val);
 }
 
-bool Calculator::Top(double &x) const
+bool Processor::Top(double &x) const
 {
     if (m_stack.empty())
         return false;
@@ -17,13 +17,13 @@ bool Calculator::Top(double &x) const
     return true;
 }
 
-void Calculator::Pop()
+void Processor::Pop()
 {
     if (!m_stack.empty())
         m_stack.pop_front();
 }
 
-bool Calculator::TopPair(double &x, double &y) const
+bool Processor::TopPair(double &x, double &y) const
 {
     if (m_stack.size() < 2)
         return false;
@@ -33,7 +33,7 @@ bool Calculator::TopPair(double &x, double &y) const
     return true;
 }
 
-void Calculator::PopPair()
+void Processor::PopPair()
 {
     Pop();
     Pop();

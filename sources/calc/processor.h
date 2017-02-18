@@ -1,10 +1,10 @@
-#ifndef CALCULATOR_H
-#define CALCULATOR_H
+#ifndef PROCESSOR_H
+#define PROCESSOR_H
 
 #include <deque>
 #include <vector>
 
-class Calculator
+class Processor
 {
 public:
     void Push(double val, bool updateLastRes);
@@ -39,7 +39,7 @@ struct NoCheck
 };
 
 template<typename Fn = double (double), typename Checker = NoCheck>
-void DoUnaryOper(Calculator &calc, Fn oper, Checker checker = Checker())
+void DoUnaryOper(Processor &calc, Fn oper, Checker checker = Checker())
 {
     double x = 0;
     if (!calc.Top(x))
@@ -58,7 +58,7 @@ void DoUnaryOper(Calculator &calc, Fn oper, Checker checker = Checker())
 }
 
 template<typename Fn = double (double, double), typename Checker = NoCheck>
-void DoBinaryOper(Calculator &calc, Fn oper, Checker checker = Checker())
+void DoBinaryOper(Processor &calc, Fn oper, Checker checker = Checker())
 {
     double x = 0;
     double y = 0;
@@ -78,4 +78,4 @@ void DoBinaryOper(Calculator &calc, Fn oper, Checker checker = Checker())
 }
 
 
-#endif // CALCULATOR_H
+#endif // PROCESSOR_H
