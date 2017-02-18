@@ -11,6 +11,7 @@ public:
         SwapXy,
         RollUp,
         RollDown,
+        ShiftUp,
         LoadPrevResult
     };
     

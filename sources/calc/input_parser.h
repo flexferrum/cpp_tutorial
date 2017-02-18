@@ -29,6 +29,7 @@ public:
     }
 
     void PrepareRegExp();
+    static bool ParseNumber(const std::string& str, double& num);
     
 private:
     std::string ExtractCommandParams(const std::string& line, size_t startPos);
@@ -47,13 +48,17 @@ std::string BuildRegExpString(const Map& map, const std::string& strPrefix)
     os << strPrefix;
     os << Cfg::Prefix;
     bool isFirst = true;
-    for (const auto& val : map)
+    
+    std::vector<typename Map::key_type> keys;
+    std::transform(map.begin(), map.end(), std::back_inserter(keys), [](auto& v) {return v.first;});
+    std::sort(keys.begin(), keys.end(), [](auto& k1, auto& k2) {return Cfg::KeySize(k1) > Cfg::KeySize(k2);});
+    for (const auto& val : keys)
     {
         if (isFirst)
             isFirst = false;
         else
             os << Cfg::Delimiter;
-        os << val.first;
+        Cfg::Escape(os, val);
     }
     
     os << Cfg::Suffix;
@@ -69,6 +74,11 @@ struct RegExpBuilderConfig<char>
     static constexpr const char* Prefix = "[";
     static constexpr const char* Suffix = "]";
     static constexpr const char* Delimiter = "";
+    static size_t KeySize(char) {return 1;}
+    static auto Escape(std::ostream& os, char ch)
+    {
+        os << '\\' << ch;
+    }
 };
 
 template<>
@@ -77,6 +87,11 @@ struct RegExpBuilderConfig<std::string>
     static constexpr const char* Prefix = "(";
     static constexpr const char* Suffix = ")";
     static constexpr const char* Delimiter = "|";
+    static size_t KeySize(const std::string& key) {return key.size();}
+    static auto Escape(std::ostream& os, const std::string& str)
+    {
+        os << str;
+    }
 };
 } // detail
 

@@ -1,9 +1,12 @@
 #include "processor.h"
 
+#include <cassert>
+
 Processor::Processor()
 {
     m_stack.reserve(m_maxStackSize * 2);
-    m_stack.resize(m_maxStackSize, 0.0);    
+    m_stack.resize(m_maxStackSize, 0.0);
+    m_registers.resize(m_registersNum);
 }
 
 void Processor::ShiftStackUp()
@@ -63,4 +66,33 @@ bool Processor::TopPair(double &x, double &y) const
     x = m_stack[0];
     y = m_stack[1];
     return true;
+}
+
+void Processor::SetRegister(int regIdx, double value)
+{
+    assert(regIdx >= 0 && regIdx < m_registersNum);
+    
+    auto& reg = m_registers[regIdx];
+    reg.hasValue = true;
+    reg.value = value;
+}
+
+bool Processor::GetRegister(int regIdx, double &value) const
+{
+    assert(regIdx >= 0 && regIdx < m_registersNum);
+    
+    auto& reg = m_registers[regIdx];
+    if (reg.hasValue)
+        value = reg.value;
+    
+    return reg.hasValue;
+}
+
+void Processor::ClearRegister(int regIdx)
+{
+    assert(regIdx >= 0 && regIdx < m_registersNum);
+    
+    auto& reg = m_registers[regIdx];
+    reg.hasValue = false;
+    reg.value = 0;
 }

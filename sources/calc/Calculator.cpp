@@ -183,6 +183,9 @@ void Calculator::Visit(const StackOperation &oper, Processor *proc) const
     case StackOperation::RollDown:
         proc->RollStackDown();
         break;
+    case StackOperation::ShiftUp:
+        proc->ShiftStackUp();
+        break;
     case StackOperation::LoadPrevResult:
     {
         double x = proc->GetPrevX();
@@ -198,6 +201,30 @@ void Calculator::Visit(const MemoryOperation &oper, Processor *proc) const
 {
     switch (oper.GetOperation())
     {
+    case MemoryOperation::StoreXToReg:
+    {
+        double x = 0;
+        if (proc->Top(x))
+        {
+            proc->SetRegister(oper.GetRegister(), x);
+        }
+        break;
+    }
+    case MemoryOperation::StoreNumToReg:
+    {
+        proc->SetRegister(oper.GetRegister(), oper.GetNumber());
+        break;
+    }
+    case MemoryOperation::LoadFromReg:
+    {
+        double x = 0;
+        if (proc->GetRegister(oper.GetRegister(), x))
+            proc->Push(x);
+        break;
+    }
+    case MemoryOperation::ClearReg:
+        proc->ClearRegister(oper.GetRegister());
+        break;
     default:
         std::cout << "ASSERT!!! Unknown operation " << oper.GetOperation() << std::endl;
     }

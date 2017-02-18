@@ -16,17 +16,17 @@
 #include <cmath>
 
 template<typename Key, typename Fn>
-bool ProcessCommand(const std::map<Key, Fn> &commands, const Key &cmd, Processor &calc)
+bool ProcessCommand(const std::map<Key, Fn> &commands, const Key &cmd, Processor &calc, const InputData& inputData)
 {
    auto p = commands.find(cmd);
    if (p == commands.end())
        return false;
    
-   p->second(calc);
+   p->second(calc, inputData);
    return true;
 }
 
-void ShowStack(Processor &calc)
+void ShowStack(Processor &calc, const InputData&)
 {
     auto &stack = calc.GetStack();
     
@@ -48,6 +48,26 @@ void ShowStack(Processor &calc)
     std::cout << "x0   : " << calc.GetPrevX() << std::endl;
 }
 
+void ShowRegisters(Processor &proc, const InputData&)
+{
+    auto& regs = proc.GetRegisters();
+    
+    for (size_t n = 0; n < regs.size(); ++ n)
+    {
+        auto& reg = regs[n];
+        std::cout << "r" << n << ": ";
+        if (reg.hasValue)
+            std::cout << reg.value;
+        else
+            std::cout << "<empty>";
+        
+        if (n % 2)
+            std::cout << std::endl;
+        else
+            std::cout << '\t';
+    }
+}
+
 void DumpInputData(const InputData& result)
 {
     std::cout << "!!! result.number = " << result.number << std::endl;
@@ -64,64 +84,104 @@ std::shared_ptr<CommandBase> MakeCommand(Args&& ... args)
     return std::make_shared<Cmd>(std::forward<Args>(args)...);
 }
 
+std::shared_ptr<CommandBase> MakeMemoryCommand(MemoryOperation::Operation operId, Processor &proc, const InputData& inputData)
+{
+    static std::regex parser("r([0-9]+)(?:,[[:space:]]*(.+))?");
+    std::shared_ptr<CommandBase> result;
+    
+    auto matchBegin = std::sregex_iterator(inputData.commandParam.begin(), inputData.commandParam.end(), parser);
+    auto matchEnd = std::sregex_iterator();
+    
+    auto matches = std::distance(matchBegin, matchEnd);
+    if (matches == 0)
+    {
+        std::cout << "ERROR! Need correct register address!" << std::endl;
+        return result;
+    }
+    auto match = *matchBegin;
+    
+    auto regName = match.str(1);
+    
+    double number = 0.0;
+    if (match.size() == 3 && operId == MemoryOperation::StoreXToReg)
+    {
+        std::string strNum = match.str(2);
+        if (InputParser::ParseNumber(strNum, number))
+            operId = MemoryOperation::StoreNumToReg;     
+    }
+    
+    int regIdx = std::atoi(regName.c_str());
+    if (regIdx < 0 || regIdx >= proc.GetRegistersNumber())
+    {
+        std::cout << "ERROR! Invalid register index. Should be in range [0 - " << proc.GetRegistersNumber() << "]" << std::endl;
+        return result;
+    }
+    return std::make_shared<MemoryOperation>(operId, regIdx, number);
+}
+
 int main()
 {
     Processor processor;
     Calculator calc;
     
-    using Fn = std::function<void (Processor &)>;
+    using Fn = std::function<void (Processor&, const InputData&)>;
     
     std::shared_ptr<CommandBase> command;
     bool doQuit = false;
         
     std::map<char, Fn> operators = 
     {
-        {'+', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Plus);}},
-        {'-', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Minus);}},
-        {'*', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Mul);}},
-        {'/', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Div);}},
+        {'+', [&command](Processor &, const InputData&){command = MakeCommand<MathOperator>(MathOperator::Plus);}},
+        {'-', [&command](Processor &, const InputData&){command = MakeCommand<MathOperator>(MathOperator::Minus);}},
+        {'*', [&command](Processor &, const InputData&){command = MakeCommand<MathOperator>(MathOperator::Mul);}},
+        {'/', [&command](Processor &, const InputData&){command = MakeCommand<MathOperator>(MathOperator::Div);}},
     };
     
     std::map<std::string, Fn> functions = 
     {
-        {"sin", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sin);}}, 
-        {"cos", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Cos);}}, 
-        {"tg", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Tan);}}, 
-        {"arcsin", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Asin);}}, 
-        {"arccos", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Acos);}}, 
-        {"arctg", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Atan);}}, 
-        {"exp", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Exp);}}, 
-        {"10x", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Exp10);}}, 
-        {"2x", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Exp2);}}, 
-        {"ln", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Ln);}}, 
-        {"lg", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Lg);}}, 
-        {"log2", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Log2);}}, 
-        {"logyx", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Log);}}, 
-        {"pow", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Pow);}}, 
-        {"x2", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sqr);}}, 
-        {"sqrt", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sqrt);}}, 
-        {"1/x", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::OneByX);}}, 
-        {"abs", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Abs);}}, 
-        {"frac", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Frac);}}, 
-        {"int", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Int);}}, 
-        {"sign", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sign);}}, 
-        {"max", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Max);}}, 
-        {"min", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Min);}}, 
-        {"clear", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Clear);}}, 
-        {"neg", [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Neg);}},
-        {"pi", [&command](Processor &){command = MakeCommand<LoadNumberCommand>(3.14159265358979323);}},        
-        {"swap", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::SwapXy);}},
-        {"rollup", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::RollUp);}},
-        {"rolldown", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::RollDown);}},
-        {"lastx", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::LoadPrevResult);}},
+        {"sin", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Sin);}}, 
+        {"cos", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Cos);}}, 
+        {"tg", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Tan);}}, 
+        {"arcsin", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Asin);}}, 
+        {"arccos", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Acos);}}, 
+        {"arctg", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Atan);}}, 
+        {"exp", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Exp);}}, 
+        {"10x", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Exp10);}}, 
+        {"2x", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Exp2);}}, 
+        {"ln", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Ln);}}, 
+        {"lg", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Lg);}}, 
+        {"log2", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Log2);}}, 
+        {"logyx", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Log);}}, 
+        {"pow", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Pow);}}, 
+        {"x2", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Sqr);}}, 
+        {"sqrt", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Sqrt);}}, 
+        {"1/x", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::OneByX);}}, 
+        {"abs", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Abs);}}, 
+        {"frac", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Frac);}}, 
+        {"int", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Int);}}, 
+        {"sign", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Sign);}}, 
+        {"max", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Max);}}, 
+        {"min", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Min);}}, 
+        {"clear", [&command](Processor &, const InputData&){command = MakeCommand<MathFunction>(MathFunction::Clear);}}, 
+        {"neg", [&command](Processor &, const InputData&){command = MakeCommand<MathOperator>(MathOperator::Neg);}},
+        {"pi", [&command](Processor &, const InputData&){command = MakeCommand<LoadNumberCommand>(3.14159265358979323);}},        
+        {"swap", [&command](Processor &, const InputData&){command = MakeCommand<StackOperation>(StackOperation::SwapXy);}},
+        {"rollup", [&command](Processor &, const InputData&){command = MakeCommand<StackOperation>(StackOperation::RollUp);}},
+        {"rolldown", [&command](Processor &, const InputData&){command = MakeCommand<StackOperation>(StackOperation::RollDown);}},
+        {"shift", [&command](Processor &, const InputData&){command = MakeCommand<StackOperation>(StackOperation::ShiftUp);}},
+        {"lastx", [&command](Processor &, const InputData&){command = MakeCommand<StackOperation>(StackOperation::LoadPrevResult);}},
+        {"storereg", [&command](Processor &proc, const InputData& inputData){command = MakeMemoryCommand(MemoryOperation::StoreXToReg, proc, inputData);}},
+        {"loadreg", [&command](Processor &proc, const InputData& inputData){command = MakeMemoryCommand(MemoryOperation::LoadFromReg, proc, inputData);}},
+        {"clearreg", [&command](Processor &proc, const InputData& inputData){command = MakeMemoryCommand(MemoryOperation::ClearReg, proc, inputData);}},
     };
     
     std::map<std::string, Fn> commands = 
     {
-        {"quit", [&doQuit](Processor &){doQuit = true;}}, 
-        {"list", [](Processor &){std::cout << "List program" << std::endl;}}, 
-        {"stack", ShowStack}, 
-        {"run", [](Processor &){std::cout << "Run program" << std::endl;}}, 
+        {"quit", [&doQuit](Processor &, const InputData&){doQuit = true;}}, 
+        {"list", [](Processor &, const InputData&){std::cout << "List program" << std::endl;}}, 
+        {"stack", ShowStack},
+        {"regs", ShowRegisters},
+        {"run", [](Processor &, const InputData&){std::cout << "Run program" << std::endl;}}, 
     };
     
     InputParser inputParser;
@@ -158,13 +218,13 @@ int main()
             switch (result.commandType)
             {
             case 0:
-                isProcessed = ProcessCommand(operators, result.command[0], processor);
+                isProcessed = ProcessCommand(operators, result.command[0], processor, result);
                 break;
             case 1:
-                isProcessed = ProcessCommand(functions, result.command, processor);
+                isProcessed = ProcessCommand(functions, result.command, processor, result);
                 break;
             case 2:
-                isProcessed = ProcessCommand(commands, result.command, processor);
+                isProcessed = ProcessCommand(commands, result.command, processor, result);
                 break;
             default:
                 break;

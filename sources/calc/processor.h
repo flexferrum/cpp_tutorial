@@ -4,6 +4,12 @@
 #include <deque>
 #include <vector>
 
+struct RegValue
+{
+    bool hasValue = false;
+    double value = 0.0;
+};
+
 class Processor
 {
 public:
@@ -14,6 +20,7 @@ public:
     void Replace(double x);
     void RollStackUp();
     void RollStackDown();
+    void ShiftStackUp();
     
     bool Top(double &x) const;    
     bool TopPair(double &x, double &y) const;
@@ -32,15 +39,28 @@ public:
         return m_stack;
     }
     
+    void SetRegister(int regIdx, double value);
+    bool GetRegister(int regIdx, double& value) const;
+    void ClearRegister(int regIdx);
+    size_t GetRegistersNumber() const
+    {
+        return m_registersNum;
+    }
+    
+    auto& GetRegisters() const
+    {
+        return m_registers;
+    }
+    
 private:
-    void ShiftStackUp();
     void ShiftStackDown();
     
 private:
     double m_prevX = 0;
     std::vector<double> m_stack;
-    std::vector<double> m_registers;
+    std::vector<RegValue> m_registers;
     const int m_maxStackSize = 4;
+    const size_t m_registersNum = 32;
 };
 
 

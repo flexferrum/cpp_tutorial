@@ -18,13 +18,9 @@ InputData InputParser::ParseLine(const std::string &line)
 {
     InputData result;
     
-    const char *numBeg = line.c_str();
-    char *numEnd = nullptr;
-    double val = strtod(numBeg, &numEnd);
-    if (numEnd != numBeg && (*numEnd == '\0' || std::isspace(*numEnd)))
+    if (ParseNumber(line, result.number))
     {
         result.isNumber = true;
-        result.number = val;
         return result;
     }
     
@@ -84,5 +80,16 @@ void InputParser::PrepareRegExp()
     std::cout << "Result regexp: " << resultStr << std::endl;
     
     m_parseRegex = std::regex(resultStr);
+}
+
+bool InputParser::ParseNumber(const std::string &str, double &num)
+{
+    const char *numBeg = str.c_str();
+    char *numEnd = nullptr;
+    num = strtod(numBeg, &numEnd);
+    if (numEnd != numBeg && (*numEnd == '\0' || std::isspace(*numEnd)))
+        return true;
+    
+    return false;
 }
 
