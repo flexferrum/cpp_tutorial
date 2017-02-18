@@ -45,7 +45,7 @@ void ShowStack(Processor &calc)
     });
     
     
-    std::cout << "x0   : " << calc.GetLastResult() << std::endl;
+    std::cout << "x0   : " << calc.GetPrevX() << std::endl;
 }
 
 void DumpInputData(const InputData& result)
@@ -110,6 +110,10 @@ int main()
         {"clear", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Clear);}}, 
         {"neg", [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Neg);}},
         {"pi", [&command](Processor &){command = MakeCommand<LoadNumberCommand>(3.14159265358979323);}},        
+        {"swap", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::SwapXy);}},
+        {"rollup", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::RollUp);}},
+        {"rolldown", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::RollDown);}},
+        {"lastx", [&command](Processor &){command = MakeCommand<StackOperation>(StackOperation::LoadPrevResult);}},
     };
     
     std::map<std::string, Fn> commands = 

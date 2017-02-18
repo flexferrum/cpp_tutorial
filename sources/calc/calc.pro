@@ -14,4 +14,5 @@ HEADERS += \
     command_base.h \
     commands_visitor_base.h \
     Calculator.h \
-    math_operations.h
+    math_operations.h \
+    memory_operations.h

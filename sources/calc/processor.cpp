@@ -1,11 +1,44 @@
 #include "processor.h"
 
-void Processor::Push(double val, bool updateLastRes)
+Processor::Processor()
 {
-    if (updateLastRes)
-        m_lastResult = val;
-    
-    m_stack.push_front(val);
+    m_stack.reserve(m_maxStackSize * 2);
+    m_stack.resize(m_maxStackSize, 0.0);    
+}
+
+void Processor::ShiftStackUp()
+{
+    std::copy(m_stack.rbegin() + 1, m_stack.rend(), m_stack.rbegin());
+}
+
+void Processor::ShiftStackDown()
+{
+    std::copy(m_stack.begin() + 1, m_stack.end(), m_stack.begin());    
+}
+
+void Processor::Push(double val)
+{
+    ShiftStackUp();
+    m_stack[0] = val;
+}
+
+void Processor::Replace(double x)
+{
+    m_stack[0] = x;
+}
+
+void Processor::RollStackUp()
+{
+    double val = m_stack[m_maxStackSize - 1];
+    ShiftStackUp();
+    m_stack[0] = val;
+}
+
+void Processor::RollStackDown()
+{
+    double val = m_stack[0];
+    ShiftStackDown();
+    m_stack[m_maxStackSize - 1] = val;
 }
 
 bool Processor::Top(double &x) const
@@ -19,8 +52,7 @@ bool Processor::Top(double &x) const
 
 void Processor::Pop()
 {
-    if (!m_stack.empty())
-        m_stack.pop_front();
+    ShiftStackDown();
 }
 
 bool Processor::TopPair(double &x, double &y) const
@@ -31,10 +63,4 @@ bool Processor::TopPair(double &x, double &y) const
     x = m_stack[0];
     y = m_stack[1];
     return true;
-}
-
-void Processor::PopPair()
-{
-    Pop();
-    Pop();
 }

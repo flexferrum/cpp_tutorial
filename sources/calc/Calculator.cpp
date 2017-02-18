@@ -23,9 +23,9 @@ void DoUnaryOper(Processor &calc, Fn oper, Checker checker = Checker())
         return;
     }
     
+    calc.SetPrevX(x);
     auto val = oper(x);
-    calc.Pop();
-    calc.Push(val, true);
+    calc.Replace(val);
     std::cout << val << std::endl;    
 }
 
@@ -43,9 +43,10 @@ void DoBinaryOper(Processor &calc, Fn oper, Checker checker = Checker())
         return;
     }
     
+    calc.SetPrevX(x);
     auto val = oper(x, y);
-    calc.PopPair();
-    calc.Push(val, true);
+    calc.Pop();
+    calc.Replace(val);
     std::cout << val << std::endl;    
 }
 
@@ -56,7 +57,7 @@ Calculator::Calculator()
 
 void Calculator::Visit(const LoadNumberCommand &cmd, Processor *proc) const
 {
-    proc->Push(cmd.GetNumber(), false);
+    proc->Push(cmd.GetNumber());
 }
 
 void Calculator::Visit(const MathOperator &oper, Processor *proc) const
@@ -158,5 +159,46 @@ void Calculator::Visit(const MathFunction &oper, Processor *proc) const
         break;
     default:
         std::cout << "ASSERT!!! Unknown operation " << oper.GetFunction() << std::endl;
+    }
+}
+
+void Calculator::Visit(const StackOperation &oper, Processor *proc) const
+{
+    switch (oper.GetOperation())
+    {
+    case StackOperation::SwapXy:
+    {
+        double x;
+        double y;
+        
+        proc->TopPair(x, y);
+        proc->Pop();
+        proc->Replace(x);
+        proc->Push(y);
+        break;
+    }
+    case StackOperation::RollUp:
+        proc->RollStackUp();
+        break;
+    case StackOperation::RollDown:
+        proc->RollStackDown();
+        break;
+    case StackOperation::LoadPrevResult:
+    {
+        double x = proc->GetPrevX();
+        proc->Push(x);
+        break;
+    }
+    default:
+        std::cout << "ASSERT!!! Unknown operation " << oper.GetOperation() << std::endl;
+    }
+}
+
+void Calculator::Visit(const MemoryOperation &oper, Processor *proc) const
+{
+    switch (oper.GetOperation())
+    {
+    default:
+        std::cout << "ASSERT!!! Unknown operation " << oper.GetOperation() << std::endl;
     }
 }

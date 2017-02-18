@@ -7,29 +7,40 @@
 class Processor
 {
 public:
-    void Push(double val, bool updateLastRes);
+    Processor();
     
-    bool Top(double &x) const;
+    void Push(double val);
     void Pop();
+    void Replace(double x);
+    void RollStackUp();
+    void RollStackDown();
     
+    bool Top(double &x) const;    
     bool TopPair(double &x, double &y) const;
-    void PopPair();
+    
+    void SetPrevX(double x)
+    {
+        m_prevX = x;
+    }
+    auto GetPrevX() const
+    {
+        return m_prevX;
+    }
     
     const auto &GetStack() const
     {
         return m_stack;
     }
     
-    auto GetLastResult() const
-    {
-        return m_lastResult;
-    }
+private:
+    void ShiftStackUp();
+    void ShiftStackDown();
     
 private:
-    double m_lastResult = 0;
-    std::deque<double> m_stack;
+    double m_prevX = 0;
+    std::vector<double> m_stack;
     std::vector<double> m_registers;
-    // const int m_maxStackSize = 4;
+    const int m_maxStackSize = 4;
 };
 
 
