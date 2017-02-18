@@ -2,6 +2,8 @@
 #include "input_parser.h"
 #include "command_base.h"
 #include "commands_visitor_base.h"
+#include "Calculator.h"
+#include "math_operations.h"
 
 #include <iostream>
 #include <regex>
@@ -12,44 +14,6 @@
 #include <cstdlib>
 #include <cctype>
 #include <cmath>
-
-class LoadNumberCommand : public CommandBase
-{
-public:
-    LoadNumberCommand(double num)
-    {
-        ;
-    }
-};
-
-class UnaryOperationCommand : public CommandBase
-{
-public:
-};
-
-class BinaryOperationCommand : public CommandBase
-{
-public:
-};
-
-using Commands = CommandsList<LoadNumberCommand, UnaryOperationCommand, BinaryOperationCommand>;
-
-class Calculator : public CommandVisitor<Calculator, Commands>
-{
-public:
-    void Visit(const LoadNumberCommand& cmd, const Processor& proc)
-    {
-        std::cout << "LoadNumberCommand visited" << std::endl;
-    }
-    void Visit(const UnaryOperationCommand& cmd, const Processor& proc)
-    {
-        std::cout << "UnaryOperationCommand visited" << std::endl;
-    }
-    void Visit(const BinaryOperationCommand& cmd, const Processor& proc)
-    {
-        std::cout << "BinaryOperationCommand visited" << std::endl;
-    }
-};
 
 template<typename Key, typename Fn>
 bool ProcessCommand(const std::map<Key, Fn> &commands, const Key &cmd, Processor &calc)
@@ -94,33 +58,59 @@ void DumpInputData(const InputData& result)
     std::cout << "!!! result.parseError = " << result.parseError << std::endl;    
 }
 
+template<typename Cmd, typename ... Args>
+std::shared_ptr<CommandBase> MakeCommand(Args&& ... args)
+{
+    return std::make_shared<Cmd>(std::forward<Args>(args)...);
+}
+
 int main()
 {
-    Processor calc;
+    Processor processor;
+    Calculator calc;
     
     using Fn = std::function<void (Processor &)>;
     
+    std::shared_ptr<CommandBase> command;
+    bool doQuit = false;
+        
     std::map<char, Fn> operators = 
     {
-        {'+', [](Processor &calc){DoBinaryOper(calc, std::plus<double>());}},
-        {'-', [](Processor &calc){DoBinaryOper(calc, std::minus<double>());}},
-        {'*', [](Processor &calc){DoBinaryOper(calc, std::multiplies<double>());}},
-        {'/', [](Processor &calc){DoBinaryOper(calc, 
-                                   [](double x, double y) {return y / x;}, 
-                                   [](double x, double /*y*/) {return x != 0;});
-         }},
+        {'+', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Plus);}},
+        {'-', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Minus);}},
+        {'*', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Mul);}},
+        {'/', [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Div);}},
     };
     
     std::map<std::string, Fn> functions = 
     {
-        {"sin", [](Processor &calc){DoUnaryOper(calc, sin);}}, 
-        {"cos", [](Processor &calc){DoUnaryOper(calc, cos);}}, 
-        {"exp", [](Processor &calc){DoUnaryOper(calc, exp);}}, 
-        {"pow", [](Processor &calc){DoBinaryOper(calc, pow);}}, 
-        {"neg", [](Processor &calc){DoUnaryOper(calc, [](double val) {return -val;});}}, 
+        {"sin", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sin);}}, 
+        {"cos", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Cos);}}, 
+        {"tg", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Tan);}}, 
+        {"arcsin", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Asin);}}, 
+        {"arccos", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Acos);}}, 
+        {"arctg", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Atan);}}, 
+        {"exp", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Exp);}}, 
+        {"10x", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Exp10);}}, 
+        {"2x", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Exp2);}}, 
+        {"ln", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Ln);}}, 
+        {"lg", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Lg);}}, 
+        {"log2", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Log2);}}, 
+        {"logyx", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Log);}}, 
+        {"pow", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Pow);}}, 
+        {"x2", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sqr);}}, 
+        {"sqrt", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sqrt);}}, 
+        {"1/x", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::OneByX);}}, 
+        {"abs", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Abs);}}, 
+        {"frac", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Frac);}}, 
+        {"int", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Int);}}, 
+        {"sign", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Sign);}}, 
+        {"max", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Max);}}, 
+        {"min", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Min);}}, 
+        {"clear", [&command](Processor &){command = MakeCommand<MathFunction>(MathFunction::Clear);}}, 
+        {"neg", [&command](Processor &){command = MakeCommand<MathOperator>(MathOperator::Neg);}},
+        {"pi", [&command](Processor &){command = MakeCommand<LoadNumberCommand>(3.14159265358979323);}},        
     };
-    
-    bool doQuit = false;
     
     std::map<std::string, Fn> commands = 
     {
@@ -130,16 +120,6 @@ int main()
         {"run", [](Processor &){std::cout << "Run program" << std::endl;}}, 
     };
     
-    LoadNumberCommand cmd1(10.0);
-    UnaryOperationCommand cmd2;
-    BinaryOperationCommand cmd3;
-    
-    Calculator calcNew;
-    
-    calcNew.VisitCommand(&cmd1, calc);
-    calcNew.VisitCommand(&cmd2, calc);
-    calcNew.VisitCommand(&cmd3, calc);
-   
     InputParser inputParser;
     AppendRegExpString(inputParser, "", operators);
     AppendRegExpString(inputParser, "?:", functions);
@@ -148,6 +128,9 @@ int main()
     
     while (!doQuit)
     {
+        if (command)
+            command.reset();
+        
         std::cout << "> ";
         std::cout.flush();
         std::string line;
@@ -155,38 +138,40 @@ int main()
         
         auto result = inputParser.ParseLine(line);
         
-//      DumpInputData(result);
-        
         if (!result.parseError.empty())
         {
             std::cout << "ERROR: " << result.parseError << std::endl;
             continue;
         }
         
+        bool isProcessed = false;
         if (result.isNumber)
         {
-            calc.Push(result.number, false);
-            continue;
+            command = MakeCommand<LoadNumberCommand>(result.number);
         }
-        
-        bool isProcessed = false;
-        switch (result.commandType)
+        else
         {
-        case 0:
-            isProcessed = ProcessCommand(operators, result.command[0], calc);
-            break;
-        case 1:
-            isProcessed = ProcessCommand(functions, result.command, calc);
-            break;
-        case 2:
-            isProcessed = ProcessCommand(commands, result.command, calc);
-            break;
-        default:
-            break;
+            switch (result.commandType)
+            {
+            case 0:
+                isProcessed = ProcessCommand(operators, result.command[0], processor);
+                break;
+            case 1:
+                isProcessed = ProcessCommand(functions, result.command, processor);
+                break;
+            case 2:
+                isProcessed = ProcessCommand(commands, result.command, processor);
+                break;
+            default:
+                break;
+            }
+            
+            if (!isProcessed)
+                std::cout << "ERROR: Unrecognised input string!" << std::endl;
         }
         
-        if (!isProcessed)
-            std::cout << "ERROR: Unrecognised input string!" << std::endl;
+        if (command)
+            calc.VisitCommand(command.get(), &processor);
     }
     
     std::cout << "Well done, commander!" << std::endl;
