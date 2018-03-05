@@ -6,7 +6,8 @@ CONFIG -= qt
 SOURCES += main.cpp \
     input_parser.cpp \
     processor.cpp \
-    Calculator.cpp
+    Calculator.cpp \
+    program_storage.cpp
 
 HEADERS += \
     input_parser.h \
@@ -15,4 +16,5 @@ HEADERS += \
     commands_visitor_base.h \
     Calculator.h \
     math_operations.h \
-    memory_operations.h
+    memory_operations.h \
+    program_storage.h

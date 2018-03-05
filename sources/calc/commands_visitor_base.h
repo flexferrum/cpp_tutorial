@@ -14,7 +14,7 @@ struct VisitorInvokator;
 template<size_t Idx, size_t Cur, typename Command, typename ... Commands>
 struct VisitorInvokator<Idx, Cur, Command, Commands...> : VisitorInvokator<Idx, Cur + 1, Commands ...>
 {
-    
+
 };
 
 template<size_t Cur, typename Command, typename ... Commands>
@@ -35,7 +35,7 @@ struct VisitorInvokator<0, 0, Command, Commands ...>
     {
         return visitor.Visit(*static_cast<const Command*>(cmd), std::forward<Args>(args)...);
     }
-    
+
     template<typename RT, typename V, typename ... Args>
     static RT Invoke(V&& visitor, const CommandBase* cmd, Args ... args)
     {
@@ -62,14 +62,14 @@ struct CommandsHashGenerator<std::index_sequence<Idx...>, Commands ...>
     static int GetTypeIndex(const type_info& ti)
     {
         static std::unordered_map<size_t, int> typesMap = {
-            {typeid(Commands).hash_code(), (int)Idx}...  
+            {typeid(Commands).hash_code(), (int)Idx}...
         };
-        
-        
+
+
         auto p = typesMap.find(ti.hash_code());
         if (p == typesMap.end())
             return -1;
-        
+
         return p->second;
     }
 };
@@ -85,14 +85,14 @@ struct CommandsList : public detail::CommandsHashGenerator<std::make_index_seque
         return RT();
     }
 
-    
+
     template<size_t Idx, typename V, typename ... ExtraArgs>
     static auto InvokeVisitor(V&& v, const CommandBase* cmd, ExtraArgs ... args)
     {
         using RT = decltype(InvokeVisitorResult(std::forward<V>(v), cmd, std::forward<ExtraArgs>(args)...));
         return detail::VisitorInvokator<Idx, 0, Commands...>::template Invoke<RT>(std::forward<V>(v), cmd, std::forward<ExtraArgs>(args)...);
     }
-    
+
 };
 
 template<typename VT, typename CommandsList>
@@ -103,13 +103,13 @@ public:
     auto VisitCommand(const CommandBase* cmd, ExtraArgs&& ... args)
     {
         auto commandId = cmd->GetCommandId(this);
-        auto visitor = *static_cast<const VT*>(this);
+        auto& visitor = *static_cast<const VT*>(this);
         using RT = decltype(CommandsList::InvokeVisitorResult(visitor, cmd, std::forward<ExtraArgs>(args)...));
-        
+
 #define VISIT_COMMAND(ID) \
     case ID: \
         return CommandsList::template InvokeVisitor<ID>(visitor, cmd, std::forward<ExtraArgs>(args)...)
-        
+
         switch (commandId)
         {
         VISIT_COMMAND(0);
@@ -185,10 +185,10 @@ public:
         default:
             break;
         };
-        
+
         return RT();
     }
-    
+
     int GetCommandId(const type_info &ti) const override
     {
         return CommandsList::GetTypeIndex(ti);

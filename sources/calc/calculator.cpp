@@ -16,17 +16,17 @@ void DoUnaryOper(Processor &calc, Fn oper, Checker checker = Checker())
     double x = 0;
     if (!calc.Top(x))
         return;
-    
+
     if (!checker(x))
     {
         std::cout << "ERROR!" << std::endl;
         return;
     }
-    
+
     calc.SetPrevX(x);
     auto val = oper(x);
     calc.Replace(val);
-    std::cout << val << std::endl;    
+    std::cout << val << std::endl;
 }
 
 template<typename Fn = double (double, double), typename Checker = NoCheck>
@@ -36,23 +36,23 @@ void DoBinaryOper(Processor &calc, Fn oper, Checker checker = Checker())
     double y = 0;
     if (!calc.TopPair(x, y))
         return;
-    
+
     if (!checker(x, y))
     {
         std::cout << "ERROR!" << std::endl;
         return;
     }
-    
+
     calc.SetPrevX(x);
     auto val = oper(x, y);
     calc.Pop();
     calc.Replace(val);
-    std::cout << val << std::endl;    
+    std::cout << val << std::endl;
 }
 
 Calculator::Calculator()
 {
-    
+
 }
 
 void Calculator::Visit(const LoadNumberCommand &cmd, Processor *proc) const
@@ -170,7 +170,7 @@ void Calculator::Visit(const StackOperation &oper, Processor *proc) const
     {
         double x;
         double y;
-        
+
         proc->TopPair(x, y);
         proc->Pop();
         proc->Replace(x);
@@ -206,24 +206,24 @@ void Calculator::Visit(const MemoryOperation &oper, Processor *proc) const
         double x = 0;
         if (proc->Top(x))
         {
-            proc->SetRegister(oper.GetRegister(), x);
+            proc->SetRegister<RegType::Real>(oper.GetRegister(), x);
         }
         break;
     }
     case MemoryOperation::StoreNumToReg:
     {
-        proc->SetRegister(oper.GetRegister(), oper.GetNumber());
+        proc->SetRegister<RegType::Real>(oper.GetRegister(), oper.GetNumber());
         break;
     }
     case MemoryOperation::LoadFromReg:
     {
-        double x = 0;
-        if (proc->GetRegister(oper.GetRegister(), x))
-            proc->Push(x);
+        auto& valReg = proc->GetRegister<RegType::Real>(oper.GetRegister());
+        if (valReg.hasValue)
+            proc->Push(valReg.value);
         break;
     }
     case MemoryOperation::ClearReg:
-        proc->ClearRegister(oper.GetRegister());
+        proc->ClearRegister<RegType::Real>(oper.GetRegister());
         break;
     default:
         std::cout << "ASSERT!!! Unknown operation " << oper.GetOperation() << std::endl;
